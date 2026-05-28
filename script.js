@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 async function initializeVisitorCounter() {
-    const namespace = "pew_profile_test_02";
+    const namespace = "pew_profile_v3";
     const key = "visits";
     const now = Date.now();
     const cooldown = 30 * 60 * 1000;
