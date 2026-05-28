@@ -1,7 +1,6 @@
 # 🌐 0djz / pew - Personal Profile Template
 
-A sleek, interactive, and fully customizable personal bio website. Inspired by the aesthetics of guns.lol and fakecrime.bio, but built from scratch to be hosted anywhere for free (like GitHub Pages).
-
+A sleek, interactive, and fully customizable personal bio website.
 ---
 
 ## ✨ Features
