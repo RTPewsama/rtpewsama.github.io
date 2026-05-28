@@ -242,7 +242,7 @@ async function initializeVisitorCounter() {
 
 
   const bioMessages = [
-    "0dzj guns.lol copy ",
+    "0dzj website presentation ",
     "\"Created by 0dzj\""
   ];
   let bioText = '';
