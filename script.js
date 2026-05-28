@@ -121,33 +121,46 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initializeVisitorCounter() {
     const namespace = "pew_profile_v3";
     const key = "visits";
+    const BASE = 0;
     const now = Date.now();
     const cooldown = 30 * 60 * 1000;
 
-    // 1. Interaction humaine vérifiée en premier
+    // Toujours afficher le vrai chiffre d'abord via /up en lecture
+    // puis décider si on incrémente
+
     if (!window._humanVerified) return;
 
-    // 2. localStorage — afficher le dernier chiffre connu si dans le cooldown
     const lastVisit = localStorage.getItem('last_visit');
-    const lastCount = localStorage.getItem('last_count');
-    if (lastVisit && (now - parseInt(lastVisit)) < cooldown && lastCount) {
-        document.getElementById('visitor-count').textContent = parseInt(lastCount).toLocaleString();
-        return;
-    }
+    const shouldIncrement = !lastVisit || (now - parseInt(lastVisit)) >= cooldown;
 
-    // 3. Appel API — plus de check sur le délai de chargement
     try {
-        const upUrl = `https://api.counterapi.dev/v1/${namespace}/${key}/up`;
-        const response = await fetch(upUrl);
+        let url;
+        if (shouldIncrement) {
+            // Incrémenter ET récupérer le nouveau chiffre
+            url = `https://api.counterapi.dev/v1/${namespace}/${key}/up`;
+        } else {
+            // Juste récupérer le chiffre sans incrémenter
+            url = `https://api.counterapi.dev/v1/${namespace}/${key}/up`;
+            // CounterAPI n'a pas de GET, on incrémente quand même
+            // → solution : stocker le dernier count connu
+            const lastCount = localStorage.getItem('last_count');
+            if (lastCount) {
+                document.getElementById('visitor-count').textContent = parseInt(lastCount).toLocaleString();
+                return;
+            }
+        }
+
+        const response = await fetch(url);
         const data = await response.json();
-        const BASE = 0;
         const displayCount = BASE + (data.count || 0);
 
-        localStorage.setItem('last_visit', now.toString());
+        if (shouldIncrement) {
+            localStorage.setItem('last_visit', now.toString());
+        }
         localStorage.setItem('last_count', displayCount.toString());
-        sessionStorage.setItem('counted', '1');
 
         document.getElementById('visitor-count').textContent = displayCount.toLocaleString();
+
     } catch (error) {
         document.getElementById('visitor-count').textContent = "0";
     }
