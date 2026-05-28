@@ -144,7 +144,8 @@ async function initializeVisitorCounter() {
         const upUrl = `https://api.counterapi.dev/v1/${namespace}/${key}/up`;
         const response = await fetch(upUrl);
         const data = await response.json();
-        const displayCount = 0 + (data.count || 0);
+        const BASE = 0; 
+        const displayCount = BASE + (data.count || 0);
 
         localStorage.setItem('last_visit', now.toString());
         localStorage.setItem('last_count', displayCount.toString());
