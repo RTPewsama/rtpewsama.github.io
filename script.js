@@ -1,3 +1,5 @@
+window._pageLoadTime = Date.now();
+window._humanVerified = false;
 let hasUserInteracted = false;
 
 function initMedia() {
@@ -119,38 +121,54 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initializeVisitorCounter() {
     const namespace = "pew_profile_test_02";
     const key = "visits";
-    
-    const lastVisit = localStorage.getItem('last_visit');
-    const lastCount = localStorage.getItem('last_count'); 
     const now = Date.now();
     const cooldown = 30 * 60 * 1000;
-    
+
+    // 1. Vérifier localStorage
+    const lastVisit = localStorage.getItem('last_visit');
+    const lastCount = localStorage.getItem('last_count');
     if (lastVisit && (now - parseInt(lastVisit)) < cooldown && lastCount) {
-        
         document.getElementById('visitor-count').textContent = parseInt(lastCount).toLocaleString();
         return;
     }
-    
-    
+
+    // 2. Vérifier sessionStorage (bloque les bots qui gardent la session ouverte)
+    if (sessionStorage.getItem('counted')) {
+        return;
+    }
+
+    // 3. Vérifier si l'utilisateur a vraiment interagi (mouvement souris, clic)
+    // → ton site a déjà le startScreen click, on peut s'en servir !
+    if (!window._humanVerified) {
+        return; // pas encore cliqué sur le startScreen
+    }
+
+    // 4. Délai minimum depuis le chargement (les bots vont vite)
+    const pageLoadTime = window._pageLoadTime || now;
+    if ((now - pageLoadTime) < 2000) {
+        return; // moins de 2 secondes sur la page
+    }
+
     try {
         const upUrl = `https://api.counterapi.dev/v1/${namespace}/${key}/up`;
         const response = await fetch(upUrl);
         const data = await response.json();
         const displayCount = 921234 + (data.count || 0);
-        
+
         localStorage.setItem('last_visit', now.toString());
-        localStorage.setItem('last_count', displayCount.toString()); 
-        
+        localStorage.setItem('last_count', displayCount.toString());
+        sessionStorage.setItem('counted', '1');
+
         document.getElementById('visitor-count').textContent = displayCount.toLocaleString();
     } catch (error) {
         document.getElementById('visitor-count').textContent = "921,234";
     }
 }
-
-initializeVisitorCounter();
   
   startScreen.addEventListener('click', () => {
     startScreen.classList.add('hidden');
+    window._humanVerified = true;
+    initializeVisitorCounter();
     backgroundMusic.muted = false;
     backgroundMusic.play().catch(err => {
       console.error("Failed to play music after start screen click:", err);
