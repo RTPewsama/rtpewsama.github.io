@@ -121,23 +121,31 @@ async function initializeVisitorCounter() {
     const key = "visits";
     
     const lastVisit = localStorage.getItem('last_visit');
+    const lastCount = localStorage.getItem('last_count'); 
     const now = Date.now();
     const cooldown = 30 * 60 * 1000;
     
-    if (lastVisit && (now - parseInt(lastVisit)) < cooldown) {
-        const getUrl = `https://api.counterapi.dev/v1/${namespace}/${key}`;
-        const response = await fetch(getUrl);
-        const data = await response.json();
-        document.getElementById('visitor-count').textContent = (921234 + (data.count || 0)).toLocaleString();
+    if (lastVisit && (now - parseInt(lastVisit)) < cooldown && lastCount) {
+        
+        document.getElementById('visitor-count').textContent = parseInt(lastCount).toLocaleString();
         return;
     }
     
-    const upUrl = `https://api.counterapi.dev/v1/${namespace}/${key}/up`;
-    const response = await fetch(upUrl);
-    const data = await response.json();
-    localStorage.setItem('last_visit', now.toString());
-    document.getElementById('visitor-count').textContent = (921234 + (data.count || 0)).toLocaleString();
-}   // ← ce } manquait !
+    
+    try {
+        const upUrl = `https://api.counterapi.dev/v1/${namespace}/${key}/up`;
+        const response = await fetch(upUrl);
+        const data = await response.json();
+        const displayCount = 921234 + (data.count || 0);
+        
+        localStorage.setItem('last_visit', now.toString());
+        localStorage.setItem('last_count', displayCount.toString()); 
+        
+        document.getElementById('visitor-count').textContent = displayCount.toLocaleString();
+    } catch (error) {
+        document.getElementById('visitor-count').textContent = "921,234";
+    }
+}
 
 initializeVisitorCounter();
   
