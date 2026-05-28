@@ -124,14 +124,10 @@ async function initializeVisitorCounter() {
     const now = Date.now();
     const cooldown = 30 * 60 * 1000;
 
-    
+    // 1. Interaction humaine vérifiée en premier
     if (!window._humanVerified) return;
 
-    
-    const pageLoadTime = window._pageLoadTime || now;
-    if ((now - pageLoadTime) < 2000) return;
-
-    
+    // 2. localStorage — afficher le dernier chiffre connu si dans le cooldown
     const lastVisit = localStorage.getItem('last_visit');
     const lastCount = localStorage.getItem('last_count');
     if (lastVisit && (now - parseInt(lastVisit)) < cooldown && lastCount) {
@@ -139,12 +135,12 @@ async function initializeVisitorCounter() {
         return;
     }
 
-    
+    // 3. Appel API — plus de check sur le délai de chargement
     try {
         const upUrl = `https://api.counterapi.dev/v1/${namespace}/${key}/up`;
         const response = await fetch(upUrl);
         const data = await response.json();
-        const BASE = 0; 
+        const BASE = 0;
         const displayCount = BASE + (data.count || 0);
 
         localStorage.setItem('last_visit', now.toString());
