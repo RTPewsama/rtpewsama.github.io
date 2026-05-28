@@ -144,7 +144,7 @@ async function initializeVisitorCounter() {
         const upUrl = `https://api.counterapi.dev/v1/${namespace}/${key}/up`;
         const response = await fetch(upUrl);
         const data = await response.json();
-        const displayCount = 921234 + (data.count || 0);
+        const displayCount = 0 + (data.count || 0);
 
         localStorage.setItem('last_visit', now.toString());
         localStorage.setItem('last_count', displayCount.toString());
@@ -152,7 +152,7 @@ async function initializeVisitorCounter() {
 
         document.getElementById('visitor-count').textContent = displayCount.toLocaleString();
     } catch (error) {
-        document.getElementById('visitor-count').textContent = "921,234";
+        document.getElementById('visitor-count').textContent = "0";
     }
 }
   
