@@ -117,32 +117,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 async function initializeVisitorCounter() {
-    // J'ai mis un nouveau namespace "_test_02" pour que tu partes sur un compteur tout neuf pour ton test.
-    // Si tu veux garder tes vues précédentes, remets l'ancien namespace !
-    const namespace = "pew_profile_test_02"; 
+    const namespace = "pew_profile_test_02";
     const key = "visits";
-    const upUrl = `https://api.counterapi.dev/v1/${namespace}/${key}/up`;
-
-    try {
-      // ⚠️ MODE TEST : On force l'URL '/up' à chaque chargement, sans vérifier le localStorage
-      const response = await fetch(upUrl);
-      const data = await response.json();
-      
-      const realCount = data.count || 0;
-      
-      // On garde l'affichage avec la base de 921234
-      const displayCount = 921234 + realCount; 
-
-      document.getElementById('visitor-count').textContent = displayCount.toLocaleString();
-
-    } catch (error) {
-      console.error("Erreur avec l'API de compteur :", error);
-      document.getElementById('visitor-count').textContent = "921,234";
+    
+    // Bloquer les re-visites trop rapides avec localStorage
+    const lastVisit = localStorage.getItem('last_visit');
+    const now = Date.now();
+    const cooldown = 30 * 60 * 1000; // 30 minutes
+    
+    if (lastVisit && (now - parseInt(lastVisit)) < cooldown) {
+        // Juste lire le compteur sans incrémenter
+        const getUrl = `https://api.counterapi.dev/v1/${namespace}/${key}`;
+        const response = await fetch(getUrl);
+        const data = await response.json();
+        document.getElementById('visitor-count').textContent = (921234 + (data.count || 0)).toLocaleString();
+        return;
     }
-  }
+    
+    // Incrémenter et sauvegarder le timestamp
+    const upUrl = `https://api.counterapi.dev/v1/${namespace}/${key}/up`;
+    const response = await fetch(upUrl);
+    const data = await response.json();
+    localStorage.setItem('last_visit', now.toString());
+    document.getElementById('visitor-count').textContent = (921234 + (data.count || 0)).toLocaleString();
 
-
-  initializeVisitorCounter();
+  
 
 
   startScreen.addEventListener('click', () => {
