@@ -124,7 +124,14 @@ async function initializeVisitorCounter() {
     const now = Date.now();
     const cooldown = 30 * 60 * 1000;
 
-    // 1. Vérifier localStorage
+    
+    if (!window._humanVerified) return;
+
+    
+    const pageLoadTime = window._pageLoadTime || now;
+    if ((now - pageLoadTime) < 2000) return;
+
+    
     const lastVisit = localStorage.getItem('last_visit');
     const lastCount = localStorage.getItem('last_count');
     if (lastVisit && (now - parseInt(lastVisit)) < cooldown && lastCount) {
@@ -132,23 +139,7 @@ async function initializeVisitorCounter() {
         return;
     }
 
-    // 2. Vérifier sessionStorage (bloque les bots qui gardent la session ouverte)
-    if (sessionStorage.getItem('counted')) {
-        return;
-    }
-
-    // 3. Vérifier si l'utilisateur a vraiment interagi (mouvement souris, clic)
-    // → ton site a déjà le startScreen click, on peut s'en servir !
-    if (!window._humanVerified) {
-        return; // pas encore cliqué sur le startScreen
-    }
-
-    // 4. Délai minimum depuis le chargement (les bots vont vite)
-    const pageLoadTime = window._pageLoadTime || now;
-    if ((now - pageLoadTime) < 2000) {
-        return; // moins de 2 secondes sur la page
-    }
-
+    
     try {
         const upUrl = `https://api.counterapi.dev/v1/${namespace}/${key}/up`;
         const response = await fetch(upUrl);
