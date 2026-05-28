@@ -140,7 +140,7 @@ async function initializeVisitorCounter() {
     const data = await response.json();
     localStorage.setItem('last_visit', now.toString());
     document.getElementById('visitor-count').textContent = (921234 + (data.count || 0)).toLocaleString();
-
+}
   
 
 
