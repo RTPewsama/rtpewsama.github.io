@@ -120,13 +120,11 @@ async function initializeVisitorCounter() {
     const namespace = "pew_profile_test_02";
     const key = "visits";
     
-    // Bloquer les re-visites trop rapides avec localStorage
     const lastVisit = localStorage.getItem('last_visit');
     const now = Date.now();
-    const cooldown = 30 * 60 * 1000; // 30 minutes
+    const cooldown = 30 * 60 * 1000;
     
     if (lastVisit && (now - parseInt(lastVisit)) < cooldown) {
-        // Juste lire le compteur sans incrémenter
         const getUrl = `https://api.counterapi.dev/v1/${namespace}/${key}`;
         const response = await fetch(getUrl);
         const data = await response.json();
@@ -134,16 +132,15 @@ async function initializeVisitorCounter() {
         return;
     }
     
-    // Incrémenter et sauvegarder le timestamp
     const upUrl = `https://api.counterapi.dev/v1/${namespace}/${key}/up`;
     const response = await fetch(upUrl);
     const data = await response.json();
     localStorage.setItem('last_visit', now.toString());
     document.getElementById('visitor-count').textContent = (921234 + (data.count || 0)).toLocaleString();
-}
+}   // ← ce } manquait !
+
+initializeVisitorCounter();
   
-
-
   startScreen.addEventListener('click', () => {
     startScreen.classList.add('hidden');
     backgroundMusic.muted = false;
