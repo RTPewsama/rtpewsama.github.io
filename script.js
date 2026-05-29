@@ -119,15 +119,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 async function initializeVisitorCounter() {
-    const namespace = "pew_profile_v3";
-    const key = "visits";
+    const SUPABASE_URL = "https://ivaasgafzjfwspttgcdf.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_m_Xqbhp8BytvJoPq1DoeNA_bL1uWDfi";
     const BASE = 0;
     const now = Date.now();
     const cooldown = 30 * 60 * 1000;
 
     if (!window._humanVerified) return;
 
-    // Lire le cookie
     const getCookie = (name) => {
         const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
         return match ? match[2] : null;
@@ -138,22 +137,39 @@ async function initializeVisitorCounter() {
     };
 
     const lastVisit = getCookie('last_visit');
-    const lastCount = getCookie('last_count');
     const shouldIncrement = !lastVisit || (now - parseInt(lastVisit)) >= cooldown;
 
     try {
-        const response = await fetch(`https://api.counterapi.dev/v1/${namespace}/${key}/up`);
-        const data = await response.json();
-        const displayCount = BASE + (data.count || 0);
+        const headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`,
+            "Content-Type": "application/json"
+        };
 
         if (shouldIncrement) {
-            
+            // Lire le count actuel
+            const getRes = await fetch(`${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`, { headers });
+            const getData = await getRes.json();
+            const currentCount = getData[0]?.count || 0;
+            const newCount = currentCount + 1;
+
+            // Mettre à jour
+            await fetch(`${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`, {
+                method: "PATCH",
+                headers,
+                body: JSON.stringify({ count: newCount })
+            });
+
             setCookie('last_visit', now.toString(), 30);
-            setCookie('last_count', displayCount.toString(), 30);
-            document.getElementById('visitor-count').textContent = displayCount.toLocaleString();
+            setCookie('last_count', (BASE + newCount).toString(), 30);
+            document.getElementById('visitor-count').textContent = (BASE + newCount).toLocaleString();
+
         } else {
-            
-            document.getElementById('visitor-count').textContent = parseInt(lastCount).toLocaleString();
+            // Juste lire sans incrémenter
+            const getRes = await fetch(`${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`, { headers });
+            const getData = await getRes.json();
+            const currentCount = getData[0]?.count || 0;
+            document.getElementById('visitor-count').textContent = (BASE + currentCount).toLocaleString();
         }
 
     } catch (error) {
