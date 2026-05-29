@@ -1,5 +1,10 @@
 window._pageLoadTime = Date.now();
 window._humanVerified = false;
+window._hasScrolled   = false;
+window._hasMouseMoved = false;
+
+window.addEventListener('scroll',    () => { window._hasScrolled   = true; }, { passive: true });
+window.addEventListener('mousemove', () => { window._hasMouseMoved = true; }, { passive: true });
 let hasUserInteracted = false;
 
 function initMedia() {
