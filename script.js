@@ -18,7 +18,48 @@ function initMedia() {
     console.error("Failed to play background video:", err);
   });
 }
+function getCanvasFingerprint() {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#f60';
+    ctx.fillRect(125, 1, 62, 20);
+    ctx.fillStyle = '#069';
+    ctx.fillText('fingerprint 🎮', 2, 15);
+    ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+    ctx.fillText('fingerprint 🎮', 4, 17);
+    return canvas.toDataURL();
+}
 
+function getWebGLFingerprint() {
+    try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl');
+        const renderer = gl.getExtension('WEBGL_debug_renderer_info');
+        return renderer ? gl.getParameter(renderer.UNMASKED_RENDERER_WEBGL) : 'no-webgl';
+    } catch {
+        return 'no-webgl';
+    }
+}
+
+async function getBrowserFingerprint() {
+    const data = [
+        screen.width, screen.height, screen.colorDepth,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        navigator.language,
+        navigator.platform,
+        navigator.hardwareConcurrency,
+        navigator.deviceMemory || 0,
+        getCanvasFingerprint(),
+        getWebGLFingerprint(),
+        Array.from(navigator.plugins).map(p => p.name).join(','),
+        navigator.maxTouchPoints,
+    ];
+    const str = data.join('|');
+    const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+}
 document.addEventListener('DOMContentLoaded', () => {
   const startScreen = document.getElementById('start-screen');
   const startText = document.getElementById('start-text');
@@ -116,51 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
     startCursorVisible = !startCursorVisible;
     startText.textContent = startTextContent + (startCursorVisible ? '|' : ' ');
   }, 500);
-
-
-function getCanvasFingerprint() {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    ctx.textBaseline = 'top';
-    ctx.font = '14px Arial';
-    ctx.fillStyle = '#f60';
-    ctx.fillRect(125, 1, 62, 20);
-    ctx.fillStyle = '#069';
-    ctx.fillText('fingerprint 🎮', 2, 15);
-    ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-    ctx.fillText('fingerprint 🎮', 4, 17);
-    return canvas.toDataURL();
-}
-
-function getWebGLFingerprint() {
-    try {
-        const canvas = document.createElement('canvas');
-        const gl = canvas.getContext('webgl');
-        const renderer = gl.getExtension('WEBGL_debug_renderer_info');
-        return renderer ? gl.getParameter(renderer.UNMASKED_RENDERER_WEBGL) : 'no-webgl';
-    } catch {
-        return 'no-webgl';
-    }
-}
-
-async function getBrowserFingerprint() {
-    const data = [
-        screen.width, screen.height, screen.colorDepth,
-        Intl.DateTimeFormat().resolvedOptions().timeZone,
-        navigator.language,
-        navigator.platform,
-        navigator.hardwareConcurrency,
-        navigator.deviceMemory || 0,
-        getCanvasFingerprint(),
-        getWebGLFingerprint(),
-        Array.from(navigator.plugins).map(p => p.name).join(','),
-        navigator.maxTouchPoints,
-    ];
-    const str = data.join('|');
-    const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-    return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
-}
-
 
 
 async function initializeVisitorCounter() {
