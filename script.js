@@ -213,6 +213,8 @@ async function initializeVisitorCounter() {
   startScreen.addEventListener('touchstart', (e) => {
     e.preventDefault();
     startScreen.classList.add('hidden');
+    window._humanVerified = true;
+    initializeVisitorCounter();
     backgroundMusic.muted = false;
     backgroundMusic.play().catch(err => {
       console.error("Failed to play music after start screen touch:", err);
