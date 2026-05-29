@@ -125,44 +125,40 @@ async function initializeVisitorCounter() {
     const now = Date.now();
     const cooldown = 30 * 60 * 1000;
 
-    // Toujours afficher le vrai chiffre d'abord via /up en lecture
-    // puis décider si on incrémente
-
     if (!window._humanVerified) return;
 
-    const lastVisit = localStorage.getItem('last_visit');
+    // Lire le cookie
+    const getCookie = (name) => {
+        const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return match ? match[2] : null;
+    };
+    const setCookie = (name, value, minutes) => {
+        const expires = new Date(Date.now() + minutes * 60000).toUTCString();
+        document.cookie = `${name}=${value}; expires=${expires}; path=/`;
+    };
+
+    const lastVisit = getCookie('last_visit');
+    const lastCount = getCookie('last_count');
     const shouldIncrement = !lastVisit || (now - parseInt(lastVisit)) >= cooldown;
 
     try {
-        let url;
-        if (shouldIncrement) {
-            // Incrémenter ET récupérer le nouveau chiffre
-            url = `https://api.counterapi.dev/v1/${namespace}/${key}/up`;
-        } else {
-            // Juste récupérer le chiffre sans incrémenter
-            url = `https://api.counterapi.dev/v1/${namespace}/${key}/up`;
-            // CounterAPI n'a pas de GET, on incrémente quand même
-            // → solution : stocker le dernier count connu
-            const lastCount = localStorage.getItem('last_count');
-            if (lastCount) {
-                document.getElementById('visitor-count').textContent = parseInt(lastCount).toLocaleString();
-                return;
-            }
-        }
-
-        const response = await fetch(url);
+        const response = await fetch(`https://api.counterapi.dev/v1/${namespace}/${key}/up`);
         const data = await response.json();
         const displayCount = BASE + (data.count || 0);
 
         if (shouldIncrement) {
-            localStorage.setItem('last_visit', now.toString());
+            
+            setCookie('last_visit', now.toString(), 30);
+            setCookie('last_count', displayCount.toString(), 30);
+            document.getElementById('visitor-count').textContent = displayCount.toLocaleString();
+        } else {
+            
+            document.getElementById('visitor-count').textContent = parseInt(lastCount).toLocaleString();
         }
-        localStorage.setItem('last_count', displayCount.toString());
-
-        document.getElementById('visitor-count').textContent = displayCount.toLocaleString();
 
     } catch (error) {
-        document.getElementById('visitor-count').textContent = "0";
+        const lastCount = getCookie('last_count');
+        document.getElementById('visitor-count').textContent = lastCount ? parseInt(lastCount).toLocaleString() : "0";
     }
 }
   
