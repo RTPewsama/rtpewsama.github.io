@@ -117,6 +117,32 @@ document.addEventListener('DOMContentLoaded', () => {
     startText.textContent = startTextContent + (startCursorVisible ? '|' : ' ');
   }, 500);
 
+function getCanvasFingerprint() {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#f60';
+    ctx.fillRect(125, 1, 62, 20);
+    ctx.fillStyle = '#069';
+    ctx.fillText('fingerprint 🎮', 2, 15);
+    ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+    ctx.fillText('fingerprint 🎮', 4, 17);
+    return canvas.toDataURL();
+}
+
+function getWebGLFingerprint() {
+    try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl');
+        const renderer = gl.getExtension('WEBGL_debug_renderer_info');
+        return renderer ? gl.getParameter(renderer.UNMASKED_RENDERER_WEBGL) : 'no-webgl';
+    } catch {
+        return 'no-webgl';
+    }
+}
+
+async function getBrowserFing
 
 async function initializeVisitorCounter() {
     const SUPABASE_URL = "https://ivaasgafzjfwspttgcdf.supabase.co";
@@ -142,13 +168,13 @@ async function initializeVisitorCounter() {
     };
 
     try {
-        // Générer le fingerprint
+        
         const fp = await getBrowserFingerprint();
         const lastVisit = getCookie('last_visit');
         const shouldIncrement = !lastVisit || (now - parseInt(lastVisit)) >= cooldown;
 
         if (shouldIncrement) {
-            // Vérifier si ce fingerprint a déjà visité récemment dans Supabase
+            
             const fpRes = await fetch(
                 `${SUPABASE_URL}/rest/v1/visitor_fingerprints?fingerprint=eq.${fp}`,
                 { headers }
@@ -158,7 +184,7 @@ async function initializeVisitorCounter() {
             if (fpData.length > 0) {
                 const lastSeenMs = new Date(fpData[0].last_seen).getTime();
                 if ((now - lastSeenMs) < cooldown) {
-                    // Fingerprint connu et récent → juste afficher sans incrémenter
+                    
                     const getRes = await fetch(
                         `${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`,
                         { headers }
@@ -168,7 +194,7 @@ async function initializeVisitorCounter() {
                         (getData[0]?.count || 0).toLocaleString();
                     return;
                 } else {
-                    // Fingerprint connu mais cooldown expiré → mettre à jour last_seen
+                    
                     await fetch(
                         `${SUPABASE_URL}/rest/v1/visitor_fingerprints?fingerprint=eq.${fp}`,
                         {
@@ -182,7 +208,7 @@ async function initializeVisitorCounter() {
                     );
                 }
             } else {
-                // Nouveau fingerprint → l'enregistrer
+               
                 await fetch(`${SUPABASE_URL}/rest/v1/visitor_fingerprints`, {
                     method: "POST",
                     headers,
@@ -190,7 +216,7 @@ async function initializeVisitorCounter() {
                 });
             }
 
-            // Incrémenter le compteur
+            
             const getRes = await fetch(
                 `${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`,
                 { headers }
@@ -209,7 +235,7 @@ async function initializeVisitorCounter() {
             document.getElementById('visitor-count').textContent = newCount.toLocaleString();
 
         } else {
-            // Dans le cooldown cookie → juste lire
+            
             const getRes = await fetch(
                 `${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`,
                 { headers }
