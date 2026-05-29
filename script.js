@@ -61,9 +61,31 @@ async function getBrowserFingerprint() {
     return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
 }
 
+function calculateTrustScore() {
+    let score = 0;
+
+    // Temps sur la page avant le clic (max 40 pts)
+    const timeOnPage = Date.now() - window._pageLoadTime;
+    if (timeOnPage > 5000)       score += 40;
+    else if (timeOnPage > 2000)  score += 20;
+    else if (timeOnPage > 800)   score += 10;
+
+    // A scrollé (20 pts)
+    if (window._hasScrolled)     score += 20;
+
+    // Mouvement souris détecté (20 pts)
+    if (window._hasMouseMoved)   score += 20;
+
+    // Navigator cohérent (20 pts)
+    if (navigator.languages && navigator.languages.length > 0) score += 10;
+    if (navigator.hardwareConcurrency > 0)                     score += 10;
+
+    return score; // max 100
+}
+
 async function initializeVisitorCounter() {
     const SUPABASE_URL = "https://ivaasgafzjfwspttgcdf.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_m_Xqbhp8BytvJoPq1DoeNA_bL1uWDfi";
+    const BASE = 0;
     const now = Date.now();
     const cooldown = 30 * 60 * 1000;
 
@@ -78,89 +100,41 @@ async function initializeVisitorCounter() {
         document.cookie = `${name}=${value}; expires=${expires}; path=/`;
     };
 
-    const headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json"
-    };
+    const lastVisit = getCookie('last_visit');
+    const lastCount = getCookie('last_count');
+    const shouldIncrement = !lastVisit || (now - parseInt(lastVisit)) >= cooldown;
+
+    if (!shouldIncrement && lastCount) {
+        document.getElementById('visitor-count').textContent = parseInt(lastCount).toLocaleString();
+        return;
+    }
 
     try {
-        
-        const fp = await getBrowserFingerprint();
-        const lastVisit = getCookie('last_visit');
-        const shouldIncrement = !lastVisit || (now - parseInt(lastVisit)) >= cooldown;
+        const fp    = await getBrowserFingerprint();
+        const score = calculateTrustScore();
+        const tz    = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-        if (shouldIncrement) {
-            
-            const fpRes = await fetch(
-                `${SUPABASE_URL}/rest/v1/visitor_fingerprints?fingerprint=eq.${fp}`,
-                { headers }
-            );
-            const fpData = await fpRes.json();
+        // Appel Edge Function
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/increment-counter`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                fingerprint: fp,
+                score,
+                timeOnPage: Date.now() - window._pageLoadTime,
+                scrolled: window._hasScrolled || false,
+                timezone: tz,
+            })
+        });
 
-            if (fpData.length > 0) {
-                const lastSeenMs = new Date(fpData[0].last_seen).getTime();
-                if ((now - lastSeenMs) < cooldown) {
-                    
-                    const getRes = await fetch(
-                        `${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`,
-                        { headers }
-                    );
-                    const getData = await getRes.json();
-                    document.getElementById('visitor-count').textContent =
-                        (getData[0]?.count || 0).toLocaleString();
-                    return;
-                } else {
-                    
-                    await fetch(
-                        `${SUPABASE_URL}/rest/v1/visitor_fingerprints?fingerprint=eq.${fp}`,
-                        {
-                            method: "PATCH",
-                            headers,
-                            body: JSON.stringify({
-                                last_seen: new Date().toISOString(),
-                                visit_count: fpData[0].visit_count + 1
-                            })
-                        }
-                    );
-                }
-            } else {
-               
-                await fetch(`${SUPABASE_URL}/rest/v1/visitor_fingerprints`, {
-                    method: "POST",
-                    headers,
-                    body: JSON.stringify({ fingerprint: fp })
-                });
-            }
+        const data = await res.json();
+        const displayCount = BASE + (data.count || 0);
 
-            
-            const getRes = await fetch(
-                `${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`,
-                { headers }
-            );
-            const getData = await getRes.json();
-            const newCount = (getData[0]?.count || 0) + 1;
-
-            await fetch(`${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`, {
-                method: "PATCH",
-                headers,
-                body: JSON.stringify({ count: newCount })
-            });
-
+        if (data.incremented) {
             setCookie('last_visit', now.toString(), 30);
-            setCookie('last_count', newCount.toString(), 30);
-            document.getElementById('visitor-count').textContent = newCount.toLocaleString();
-
-        } else {
-            
-            const getRes = await fetch(
-                `${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`,
-                { headers }
-            );
-            const getData = await getRes.json();
-            document.getElementById('visitor-count').textContent =
-                (getData[0]?.count || 0).toLocaleString();
         }
+        setCookie('last_count', displayCount.toString(), 30);
+        document.getElementById('visitor-count').textContent = displayCount.toLocaleString();
 
     } catch (error) {
         const lastCount = getCookie('last_count');
