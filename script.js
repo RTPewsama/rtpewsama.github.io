@@ -117,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     startText.textContent = startTextContent + (startCursorVisible ? '|' : ' ');
   }, 500);
 
+
 function getCanvasFingerprint() {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -142,7 +143,25 @@ function getWebGLFingerprint() {
     }
 }
 
-async function getBrowserFing
+async function getBrowserFingerprint() {
+    const data = [
+        screen.width, screen.height, screen.colorDepth,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        navigator.language,
+        navigator.platform,
+        navigator.hardwareConcurrency,
+        navigator.deviceMemory || 0,
+        getCanvasFingerprint(),
+        getWebGLFingerprint(),
+        Array.from(navigator.plugins).map(p => p.name).join(','),
+        navigator.maxTouchPoints,
+    ];
+    const str = data.join('|');
+    const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+}
+
+
 
 async function initializeVisitorCounter() {
     const SUPABASE_URL = "https://ivaasgafzjfwspttgcdf.supabase.co";
