@@ -121,7 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initializeVisitorCounter() {
     const SUPABASE_URL = "https://ivaasgafzjfwspttgcdf.supabase.co";
     const SUPABASE_KEY = "sb_publishable_m_Xqbhp8BytvJoPq1DoeNA_bL1uWDfi";
-    const BASE = 0;
     const now = Date.now();
     const cooldown = 30 * 60 * 1000;
 
@@ -136,24 +135,69 @@ async function initializeVisitorCounter() {
         document.cookie = `${name}=${value}; expires=${expires}; path=/`;
     };
 
-    const lastVisit = getCookie('last_visit');
-    const shouldIncrement = !lastVisit || (now - parseInt(lastVisit)) >= cooldown;
+    const headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json"
+    };
 
     try {
-        const headers = {
-            "apikey": SUPABASE_KEY,
-            "Authorization": `Bearer ${SUPABASE_KEY}`,
-            "Content-Type": "application/json"
-        };
+        // Générer le fingerprint
+        const fp = await getBrowserFingerprint();
+        const lastVisit = getCookie('last_visit');
+        const shouldIncrement = !lastVisit || (now - parseInt(lastVisit)) >= cooldown;
 
         if (shouldIncrement) {
-            // Lire le count actuel
-            const getRes = await fetch(`${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`, { headers });
-            const getData = await getRes.json();
-            const currentCount = getData[0]?.count || 0;
-            const newCount = currentCount + 1;
+            // Vérifier si ce fingerprint a déjà visité récemment dans Supabase
+            const fpRes = await fetch(
+                `${SUPABASE_URL}/rest/v1/visitor_fingerprints?fingerprint=eq.${fp}`,
+                { headers }
+            );
+            const fpData = await fpRes.json();
 
-            // Mettre à jour
+            if (fpData.length > 0) {
+                const lastSeenMs = new Date(fpData[0].last_seen).getTime();
+                if ((now - lastSeenMs) < cooldown) {
+                    // Fingerprint connu et récent → juste afficher sans incrémenter
+                    const getRes = await fetch(
+                        `${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`,
+                        { headers }
+                    );
+                    const getData = await getRes.json();
+                    document.getElementById('visitor-count').textContent =
+                        (getData[0]?.count || 0).toLocaleString();
+                    return;
+                } else {
+                    // Fingerprint connu mais cooldown expiré → mettre à jour last_seen
+                    await fetch(
+                        `${SUPABASE_URL}/rest/v1/visitor_fingerprints?fingerprint=eq.${fp}`,
+                        {
+                            method: "PATCH",
+                            headers,
+                            body: JSON.stringify({
+                                last_seen: new Date().toISOString(),
+                                visit_count: fpData[0].visit_count + 1
+                            })
+                        }
+                    );
+                }
+            } else {
+                // Nouveau fingerprint → l'enregistrer
+                await fetch(`${SUPABASE_URL}/rest/v1/visitor_fingerprints`, {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify({ fingerprint: fp })
+                });
+            }
+
+            // Incrémenter le compteur
+            const getRes = await fetch(
+                `${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`,
+                { headers }
+            );
+            const getData = await getRes.json();
+            const newCount = (getData[0]?.count || 0) + 1;
+
             await fetch(`${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`, {
                 method: "PATCH",
                 headers,
@@ -161,20 +205,24 @@ async function initializeVisitorCounter() {
             });
 
             setCookie('last_visit', now.toString(), 30);
-            setCookie('last_count', (BASE + newCount).toString(), 30);
-            document.getElementById('visitor-count').textContent = (BASE + newCount).toLocaleString();
+            setCookie('last_count', newCount.toString(), 30);
+            document.getElementById('visitor-count').textContent = newCount.toLocaleString();
 
         } else {
-            // Juste lire sans incrémenter
-            const getRes = await fetch(`${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`, { headers });
+            // Dans le cooldown cookie → juste lire
+            const getRes = await fetch(
+                `${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`,
+                { headers }
+            );
             const getData = await getRes.json();
-            const currentCount = getData[0]?.count || 0;
-            document.getElementById('visitor-count').textContent = (BASE + currentCount).toLocaleString();
+            document.getElementById('visitor-count').textContent =
+                (getData[0]?.count || 0).toLocaleString();
         }
 
     } catch (error) {
         const lastCount = getCookie('last_count');
-        document.getElementById('visitor-count').textContent = lastCount ? parseInt(lastCount).toLocaleString() : "0";
+        document.getElementById('visitor-count').textContent =
+            lastCount ? parseInt(lastCount).toLocaleString() : "0";
     }
 }
   
