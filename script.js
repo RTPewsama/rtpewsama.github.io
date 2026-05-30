@@ -121,9 +121,13 @@ async function initializeVisitorCounter() {
 
         // Appel Edge Function
         const res = await fetch(`${SUPABASE_URL}/functions/v1/increment-counter`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer sb_publishable_m_Xqbhp8BytvJoPq1DoeNA_bL1uWDfi`,
+            "apikey": "sb_publishable_m_Xqbhp8BytvJoPq1DoeNA_bL1uWDfi"
+        },
+        body: JSON.stringify({
                 fingerprint: fp,
                 score,
                 timeOnPage: Date.now() - window._pageLoadTime,
