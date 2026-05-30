@@ -69,27 +69,28 @@ async function getBrowserFingerprint() {
 function calculateTrustScore() {
     let score = 0;
 
-    // Temps sur la page avant le clic (max 40 pts)
+    
     const timeOnPage = Date.now() - window._pageLoadTime;
     if (timeOnPage > 5000)       score += 40;
     else if (timeOnPage > 2000)  score += 20;
     else if (timeOnPage > 800)   score += 10;
 
-    // A scrollé (20 pts)
+   
     if (window._hasScrolled)     score += 20;
 
-    // Mouvement souris détecté (20 pts)
+    
     if (window._hasMouseMoved)   score += 20;
 
-    // Navigator cohérent (20 pts)
+    
     if (navigator.languages && navigator.languages.length > 0) score += 10;
     if (navigator.hardwareConcurrency > 0)                     score += 10;
 
-    return score; // max 100
+    return score; 
 }
 
 async function initializeVisitorCounter() {
     const SUPABASE_URL = "https://ivaasgafzjfwspttgcdf.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_m_Xqbhp8BytvJoPq1DoeNA_bL1uWDfi";
     const BASE = 0;
     const now = Date.now();
     const cooldown = 30 * 60 * 1000;
@@ -109,25 +110,25 @@ async function initializeVisitorCounter() {
     const lastCount = getCookie('last_count');
     const shouldIncrement = !lastVisit || (now - parseInt(lastVisit)) >= cooldown;
 
-    if (!shouldIncrement && lastCount) {
+    
+    if (lastCount) {
         document.getElementById('visitor-count').textContent = parseInt(lastCount).toLocaleString();
-        return;
     }
 
+    
     try {
         const fp    = await getBrowserFingerprint();
         const score = calculateTrustScore();
         const tz    = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-        // Appel Edge Function
         const res = await fetch(`${SUPABASE_URL}/functions/v1/increment-counter`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer sb_publishable_m_Xqbhp8BytvJoPq1DoeNA_bL1uWDfi`,
-            "apikey": "sb_publishable_m_Xqbhp8BytvJoPq1DoeNA_bL1uWDfi"
-        },
-        body: JSON.stringify({
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${SUPABASE_KEY}`,
+                "apikey": SUPABASE_KEY
+            },
+            body: JSON.stringify({
                 fingerprint: fp,
                 score,
                 timeOnPage: Date.now() - window._pageLoadTime,
@@ -143,12 +144,12 @@ async function initializeVisitorCounter() {
             setCookie('last_visit', now.toString(), 30);
         }
         setCookie('last_count', displayCount.toString(), 30);
+
+        
         document.getElementById('visitor-count').textContent = displayCount.toLocaleString();
 
     } catch (error) {
-        const lastCount = getCookie('last_count');
-        document.getElementById('visitor-count').textContent =
-            lastCount ? parseInt(lastCount).toLocaleString() : "0";
+        
     }
 }
 document.addEventListener('DOMContentLoaded', () => {
