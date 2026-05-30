@@ -71,17 +71,13 @@ function calculateTrustScore() {
 
     
     const timeOnPage = Date.now() - window._pageLoadTime;
-    if (timeOnPage > 5000)       score += 40;
-    else if (timeOnPage > 2000)  score += 20;
-    else if (timeOnPage > 800)   score += 10;
-
-   
-    if (window._hasScrolled)     score += 20;
+    if (timeOnPage > 3000)       score += 60;
+    else if (timeOnPage > 1500)  score += 40;
+    else if (timeOnPage > 500)   score += 20;
 
     
     if (window._hasMouseMoved)   score += 20;
-
-    
+  
     if (navigator.languages && navigator.languages.length > 0) score += 10;
     if (navigator.hardwareConcurrency > 0)                     score += 10;
 
