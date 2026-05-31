@@ -2,7 +2,24 @@ window._pageLoadTime = Date.now();
 window._humanVerified = false;
 window._hasScrolled   = false;
 window._hasMouseMoved = false;
-
+window._sessionToken = crypto.randomUUID();
+window._pageLoadTime = Date.now();
+(async () => {
+    try {
+        await fetch("https://ivaasgafzjfwspttgcdf.supabase.co/rest/v1/page_loads", {
+            method: "POST",
+            headers: {
+                "apikey": "sb_publishable_m_Xqbhp8BytvJoPq1DoeNA_bL1uWDfi",
+                "Authorization": "Bearer sb_publishable_m_Xqbhp8BytvJoPq1DoeNA_bL1uWDfi",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                token: window._sessionToken,
+                fingerprint: ""
+            })
+        });
+    } catch {}
+})();
 window.addEventListener('scroll',    () => { window._hasScrolled   = true; }, { passive: true });
 window.addEventListener('mousemove', () => { window._hasMouseMoved = true; }, { passive: true });
 let hasUserInteracted = false;
@@ -136,9 +153,9 @@ async function initializeVisitorCounter() {
                 "apikey": SUPABASE_KEY
             },
             body: JSON.stringify({
-                fingerprint: fp,
-                timeOnPage,      // ← vrai temps mesuré, validé côté serveur
-                honeypot,        // ← doit être vide
+                fingerprint: fp, 
+                token: window._sessionToken,
+                honeypot,        
                 timezone: tz,
                 canvasHash,
             })
