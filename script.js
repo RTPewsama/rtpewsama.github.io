@@ -6,16 +6,19 @@ window._sessionToken = crypto.randomUUID();
 window._pageLoadTime = Date.now();
 (async () => {
     try {
+        const fp = await getBrowserFingerprint(); 
+        window._cachedFingerprint = fp;           
         await fetch("https://ivaasgafzjfwspttgcdf.supabase.co/rest/v1/page_loads", {
             method: "POST",
             headers: {
                 "apikey": "sb_publishable_m_Xqbhp8BytvJoPq1DoeNA_bL1uWDfi",
                 "Authorization": "Bearer sb_publishable_m_Xqbhp8BytvJoPq1DoeNA_bL1uWDfi",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Prefer": "return=minimal"
             },
-            body: JSON.stringify({
+            body: JSON.stringify({ 
                 token: window._sessionToken,
-                fingerprint: ""
+                fingerprint: fp  
             })
         });
     } catch {}
@@ -139,9 +142,9 @@ async function initializeVisitorCounter() {
     }
 
     try {
-        const fp         = await getBrowserFingerprint();
+        const fp = window._cachedFingerprint || await getBrowserFingerprint();
         const tz         = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const timeOnPage = Date.now() - window._pageLoadTime; // mesuré réellement
+        const timeOnPage = Date.now() - window._pageLoadTime;
         const honeypot   = document.getElementById('hp_field')?.value || "";
         const canvasHash = getCanvasFingerprint().slice(-16);
 
@@ -278,7 +281,11 @@ document.addEventListener('DOMContentLoaded', () => {
   startScreen.addEventListener('click', () => {
     startScreen.classList.add('hidden');
     window._humanVerified = true;
-    initializeVisitorCounter();
+    const elapsed = Date.now() - window._pageLoadTime;
+    const minDelay = Math.max(0, 5000 - elapsed);
+    setTimeout(() => {
+        initializeVisitorCounter();
+    }, minDelay);
     backgroundMusic.muted = false;
     backgroundMusic.play().catch(err => {
       console.error("Failed to play music after start screen click:", err);
