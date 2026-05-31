@@ -100,16 +100,33 @@ async function initializeVisitorCounter() {
     const lastCount = getCookie('last_count');
     const shouldIncrement = !lastVisit || (now - parseInt(lastVisit)) >= cooldown;
 
-    
+    // Afficher immédiatement le dernier chiffre connu
     if (lastCount) {
         document.getElementById('visitor-count').textContent = parseInt(lastCount).toLocaleString();
     }
 
-    
+    if (!shouldIncrement) {
+        // Juste lire le vrai chiffre sans incrémenter
+        try {
+            const headers = {
+                "apikey": SUPABASE_KEY,
+                "Authorization": `Bearer ${SUPABASE_KEY}`,
+            };
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/visitor_counter?id=eq.1`, { headers });
+            const data = await res.json();
+            const displayCount = BASE + (data[0]?.count || 0);
+            setCookie('last_count', displayCount.toString(), 30);
+            document.getElementById('visitor-count').textContent = displayCount.toLocaleString();
+        } catch {}
+        return;
+    }
+
     try {
-        const fp    = await getBrowserFingerprint();
-        const score = calculateTrustScore();
-        const tz    = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const fp         = await getBrowserFingerprint();
+        const tz         = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const timeOnPage = Date.now() - window._pageLoadTime; // mesuré réellement
+        const honeypot   = document.getElementById('hp_field')?.value || "";
+        const canvasHash = getCanvasFingerprint().slice(-16);
 
         const res = await fetch(`${SUPABASE_URL}/functions/v1/increment-counter`, {
             method: "POST",
@@ -120,10 +137,10 @@ async function initializeVisitorCounter() {
             },
             body: JSON.stringify({
                 fingerprint: fp,
-                score,
-                timeOnPage: Date.now() - window._pageLoadTime,
-                scrolled: window._hasScrolled || false,
+                timeOnPage,      // ← vrai temps mesuré, validé côté serveur
+                honeypot,        // ← doit être vide
                 timezone: tz,
+                canvasHash,
             })
         });
 
@@ -134,12 +151,12 @@ async function initializeVisitorCounter() {
             setCookie('last_visit', now.toString(), 30);
         }
         setCookie('last_count', displayCount.toString(), 30);
-
-        
         document.getElementById('visitor-count').textContent = displayCount.toLocaleString();
 
     } catch (error) {
-        
+        const lc = getCookie('last_count');
+        document.getElementById('visitor-count').textContent =
+            lc ? parseInt(lc).toLocaleString() : "0";
     }
 }
 document.addEventListener('DOMContentLoaded', () => {
