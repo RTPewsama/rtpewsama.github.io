@@ -383,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   const bioMessages = [
-    "0dzj website presentation ",
+    "Romain la gross pute ",
     "\"Created by 0dzj\""
   ];
   let bioText = '';
