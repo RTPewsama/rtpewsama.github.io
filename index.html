@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Herbier – Recherche de plantes</title>
+<style>
+:root{--bg:#fff;--fg:#0a0a0a;--mut:#6b6b6b;--line:#d9d9d9;--net:10,10,10}
+:root[data-theme="dark"]{--bg:#000;--fg:#f5f5f5;--mut:#9a9a9a;--line:#2b2b2b;--net:245,245,245}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:Georgia,"Times New Roman",serif;transition:background .3s,color .3s;overflow-x:hidden}
+canvas{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+.ui{position:relative;z-index:1;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;pointer-events:none}
+.ui>*{pointer-events:auto}
+#theme{position:fixed;top:18px;right:18px;z-index:5;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;display:grid;place-items:center}
+#theme:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+#theme svg{width:22px;height:22px}
+.sun{display:none}
+:root[data-theme="dark"] .sun{display:block}
+:root[data-theme="dark"] .moon{display:none}
+h1{font-size:clamp(2.4rem,7vw,4.5rem);font-weight:400;letter-spacing:-.02em;margin:0 0 28px;text-align:center}
+.box{width:min(640px,100%);position:relative}
+input[type=text],input[type=password],input[type=url]{width:100%;font:inherit;font-size:1.1rem;padding:16px 22px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.box input{box-shadow:0 2px 14px rgba(128,128,128,.18)}
+.res{margin-top:10px;border:1px solid var(--line);border-radius:18px;background:var(--bg);overflow:hidden;display:none}
+.res.on{display:block}
+.item{display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--fg)}
+.item:last-child{border:0}
+.item:hover,.item:focus-visible{background:rgba(128,128,128,.14)}
+.item img{width:42px;height:42px;object-fit:cover;border-radius:8px}
+.item small{display:block;color:var(--mut);font-size:.8rem;word-break:break-all}
+.empty{padding:16px 20px;color:var(--mut)}
+a.adm{position:fixed;left:18px;bottom:14px;z-index:5;color:var(--mut);font-size:.8rem}
+/* admin */
+.panel{width:min(560px,100%);border:1px solid var(--line);border-radius:20px;padding:28px;background:var(--bg)}
+.panel h2{font-weight:400;margin:0 0 18px;font-size:1.6rem}
+.panel label{display:block;margin:14px 0 6px;color:var(--mut);font-size:.9rem}
+.btn{font:inherit;margin-top:18px;padding:12px 24px;border-radius:999px;border:1px solid var(--fg);background:var(--fg);color:var(--bg);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--fg);margin-left:8px}
+.err{color:#c0392b;margin-top:10px;min-height:1.2em}
+.list{margin:20px 0 0;padding:0;list-style:none;max-height:180px;overflow:auto;font-size:.95rem}
+.list li{padding:6px 0;border-bottom:1px solid var(--line)}
+.modal{position:fixed;inset:0;z-index:10;background:rgba(0,0,0,.6);display:none;place-items:center;padding:20px}
+.modal.on{display:grid}
+.modal .panel{max-width:720px}
+textarea{width:100%;height:220px;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:12px;resize:vertical}
+.hide{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<button id="theme" aria-label="Changer de thème" title="Changer de thème">
+  <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+  <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+</button>
+<canvas id="net"></canvas>
+
+<!-- Page de recherche -->
+<main class="ui" id="home">
+  <h1>Herbier</h1>
+  <div class="box">
+    <input type="text" id="q" placeholder="Rechercher une plante…" autocomplete="off" aria-label="Nom de la plante" autofocus>
+    <div class="res" id="res"></div>
+  </div>
+</main>
+
+<!-- Page admin -->
+<main class="ui hide" id="admin">
+  <div class="panel" id="login">
+    <h2>Administration</h2>
+    <label for="pw">Mot de passe</label>
+    <input type="password" id="pw" autocomplete="off">
+    <div class="err" id="loginErr"></div>
+    <button class="btn" id="loginBtn">Entrer</button>
+    <button class="btn ghost" data-home>Retour</button>
+  </div>
+  <div class="panel hide" id="form">
+    <h2>Ajouter une plante</h2>
+    <label for="pn">Nom de la plante</label>
+    <input type="text" id="pn" placeholder="Ex : Lavande">
+    <label for="pu">URL de la plante</label>
+    <input type="url" id="pu" placeholder="https://…">
+    <div class="err" id="formErr"></div>
+    <button class="btn" id="saveBtn">Enregistrer</button>
+    <button class="btn ghost" data-home>Retour au site</button>
+    <ul class="list" id="plist"></ul>
+  </div>
+</main>
+
+<a class="adm" href="#admin" id="admLink">admin</a>
+
+<!-- Pop-up code -->
+<div class="modal" id="modal" role="dialog" aria-modal="true">
+  <div class="panel">
+    <h2>Plante enregistrée</h2>
+    <p style="color:var(--mut);margin:0 0 12px">Dans <b>index.html</b>, remplace la ligne <code>const PLANTS = [...]</code> par ce code, puis envoie le fichier sur GitHub :</p>
+    <textarea id="code" readonly></textarea>
+    <button class="btn" id="copyBtn">Copier le code</button>
+    <button class="btn ghost" id="closeBtn">Fermer</button>
+  </div>
+</div>
+
+<script>
+/* ====== LISTE DES PLANTES : c'est cette ligne que tu remplaces ====== */
+const PLANTS = [
+  {"nom":"Lavande","url":"https://fr.wikipedia.org/wiki/Lavande"},
+  {"nom":"Rose","url":"https://fr.wikipedia.org/wiki/Rose_(fleur)"},
+  {"nom":"Menthe","url":"https://fr.wikipedia.org/wiki/Menthe"}
+];
+/* ==================================================================== */
+
+const $=id=>document.getElementById(id);
+const norm=s=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+const root=document.documentElement;
+let plants=PLANTS.slice();
+
+/* Thème */
+try{const t=localStorage.getItem("theme");if(t)root.dataset.theme=t;}catch(e){}
+$("theme").onclick=()=>{
+  root.dataset.theme=root.dataset.theme==="dark"?"light":"dark";
+  try{localStorage.setItem("theme",root.dataset.theme)}catch(e){}
+  setNet();
+};
+
+/* Recherche */
+const esc=s=>s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const isImg=u=>/\.(png|jpe?g|webp|gif|avif|svg)(\?.*)?$/i.test(u);
+function search(){
+  const v=norm($("q").value),r=$("res");
+  if(!v){r.className="res";r.innerHTML="";return}
+  const hits=plants.filter(p=>norm(p.nom).includes(v));
+  r.className="res on";
+  r.innerHTML=hits.length?hits.map(p=>`<a class="item" href="${esc(p.url)}" target="_blank" rel="noopener">${isImg(p.url)?`<img src="${esc(p.url)}" alt="">`:""}<span>${esc(p.nom)}<small>${esc(p.url)}</small></span></a>`).join(""):`<div class="empty">Aucune plante trouvée.</div>`;
+}
+$("q").addEventListener("input",search);
+$("q").addEventListener("keydown",e=>{if(e.key==="Enter"){const a=$("res").querySelector("a");if(a)window.open(a.href,"_blank")}});
+
+/* Navigation : /admin (via 404.html) ou #admin */
+function route(){
+  const adm=/\/admin\/?$/.test(location.pathname)||location.hash==="#admin";
+  $("home").classList.toggle("hide",adm);
+  $("admin").classList.toggle("hide",!adm);
+  $("admLink").classList.toggle("hide",adm);
+  if(adm){$("login").classList.remove("hide");$("form").classList.add("hide");$("pw").value="";$("pw").focus()}
+}
+window.addEventListener("hashchange",route);
+document.querySelectorAll("[data-home]").forEach(b=>b.onclick=()=>{
+  const base=location.pathname.replace(/\/admin\/?$/,"/");
+  history.replaceState(null,"",base);route();
+});
+route();
+
+/* Admin */
+function login(){
+  if($("pw").value==="azur"){$("login").classList.add("hide");$("form").classList.remove("hide");renderList();$("pn").focus()}
+  else $("loginErr").textContent="Mot de passe incorrect."
+}
+$("loginBtn").onclick=login;
+$("pw").addEventListener("keydown",e=>{if(e.key==="Enter")login()});
+function renderList(){$("plist").innerHTML=plants.map(p=>`<li>${esc(p.nom)}</li>`).join("")}
+$("saveBtn").onclick=()=>{
+  const nom=$("pn").value.trim(),url=$("pu").value.trim();
+  if(!nom||!url){$("formErr").textContent="Renseigne le nom et l'URL.";return}
+  try{new URL(url)}catch(e){$("formErr").textContent="L'URL n'est pas valide (elle doit commencer par https://).";return}
+  $("formErr").textContent="";
+  plants.push({nom,url});
+  $("pn").value="";$("pu").value="";renderList();
+  $("code").value="const PLANTS = [\n"+plants.map(p=>"  "+JSON.stringify(p)).join(",\n")+"\n];";
+  $("modal").classList.add("on");
+};
+$("closeBtn").onclick=()=>$("modal").classList.remove("on");
+$("copyBtn").onclick=async()=>{
+  try{await navigator.clipboard.writeText($("code").value)}catch(e){$("code").select();document.execCommand("copy")}
+  $("copyBtn").textContent="Copié !";setTimeout(()=>$("copyBtn").textContent="Copier le code",1500);
+};
+
+/* Fond « neurones » avec répulsion */
+const cv=$("net"),cx=cv.getContext("2d");
+let W,H,pts=[],col="10,10,10",mouse={x:-999,y:-999};
+const R=100,LINK=110;
+function setNet(){col=getComputedStyle(root).getPropertyValue("--net")}
+function resize(){
+  const d=devicePixelRatio||1;W=innerWidth;H=innerHeight;
+  cv.width=W*d;cv.height=H*d;cx.setTransform(d,0,0,d,0,0);
+  const n=Math.min(260,Math.floor(W*H/5500));
+  while(pts.length<n){const a=Math.random()*6.283,sp=.08+Math.random()*.17;const bx=Math.cos(a)*sp,by=Math.sin(a)*sp;pts.push({x:Math.random()*W,y:Math.random()*H,bx,by,vx:bx,vy:by})}
+  pts.length=n;
+}
+addEventListener("resize",resize);
+addEventListener("mousemove",e=>{mouse.x=e.clientX;mouse.y=e.clientY});
+addEventListener("touchmove",e=>{const t=e.touches[0];mouse.x=t.clientX;mouse.y=t.clientY},{passive:true});
+addEventListener("mouseout",()=>{mouse.x=mouse.y=-999});
+function frame(){
+  cx.clearRect(0,0,W,H);
+  for(const p of pts){
+    const dx=p.x-mouse.x,dy=p.y-mouse.y,d=Math.hypot(dx,dy);
+    if(d<R&&d>0){const f=(1-d/R)*.35;p.vx+=dx/d*f;p.vy+=dy/d*f}
+    p.vx+=(p.bx-p.vx)*.03;p.vy+=(p.by-p.vy)*.03;
+    p.x+=p.vx;p.y+=p.vy;
+    if(p.x<-10)p.x=W+10;else if(p.x>W+10)p.x=-10;
+    if(p.y<-10)p.y=H+10;else if(p.y>H+10)p.y=-10;
+  }
+  for(let i=0;i<pts.length;i++){
+    const a=pts[i];
+    for(let j=i+1;j<pts.length;j++){
+      const b=pts[j],d=Math.hypot(a.x-b.x,a.y-b.y);
+      if(d<LINK){cx.strokeStyle=`rgba(${col},${(1-d/LINK)*.28})`;cx.lineWidth=1;cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke()}
+    }
+    cx.fillStyle=`rgba(${col},.5)`;cx.beginPath();cx.arc(a.x,a.y,1.6,0,6.283);cx.fill();
+  }
+  requestAnimationFrame(frame);
+}
+setNet();resize();frame();
+</script>
+</body>
+</html>
