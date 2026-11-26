@@ -58,9 +58,9 @@ textarea{width:100%;height:220px;font:13px/1.5 ui-monospace,Menlo,Consolas,monos
 
 <!-- Page de recherche -->
 <main class="ui" id="home">
-  <h1>Rechercher une plante / catégorie</h1>
+  <h1>Rechercher une e / catégorie</h1>
   <div class="box">
-    <input type="text" id="q" placeholder="Rechercher une plante…" autocomplete="off" aria-label="Nom de la plante" autofocus>
+    <input type="text" id="q" placeholder="Rechercher une e…" autocomplete="off" aria-label="Nom de la e" autofocus>
     <div class="res" id="res"></div>
   </div>
 </main>
@@ -76,10 +76,10 @@ textarea{width:100%;height:220px;font:13px/1.5 ui-monospace,Menlo,Consolas,monos
     <button class="btn ghost" data-home>Retour</button>
   </div>
   <div class="panel hide" id="form">
-    <h2>Ajouter une plante</h2>
-    <label for="pn">Nom de la plante</label>
+    <h2>Ajouter une e</h2>
+    <label for="pn">Nom de la e</label>
     <input type="text" id="pn" placeholder="Ex : Lavande">
-    <label for="pu">URL de la plante</label>
+    <label for="pu">URL de la e</label>
     <input type="url" id="pu" placeholder="https://…">
     <div class="err" id="formErr"></div>
     <button class="btn" id="saveBtn">Enregistrer</button>
@@ -93,8 +93,8 @@ textarea{width:100%;height:220px;font:13px/1.5 ui-monospace,Menlo,Consolas,monos
 <!-- Pop-up code -->
 <div class="modal" id="modal" role="dialog" aria-modal="true">
   <div class="panel">
-    <h2>Plante enregistrée</h2>
-    <p style="color:var(--mut);margin:0 0 12px">Dans <b>index.html</b>, remplace la ligne <code>const PLANTS = [...]</code> par ce code, puis envoie le fichier sur GitHub :</p>
+    <h2>e enregistrée</h2>
+    <p style="color:var(--mut);margin:0 0 12px">Dans <b>index.html</b>, remplace la ligne <code>const S = [...]</code> par ce code, puis envoie le fichier sur GitHub :</p>
     <textarea id="code" readonly></textarea>
     <button class="btn" id="copyBtn">Copier le code</button>
     <button class="btn ghost" id="closeBtn">Fermer</button>
@@ -102,13 +102,13 @@ textarea{width:100%;height:220px;font:13px/1.5 ui-monospace,Menlo,Consolas,monos
 </div>
 
 <script>
-/* ====== LISTE DES PLANTES : c'est cette ligne que tu remplaces ====== */
+/* ====== LISTE DES ES : c'est cette ligne que tu remplaces ====== */
 const PLANTS = [
   {"nom":"Lavande","url":"https://fr.wikipedia.org/wiki/Lavande"},
   {"nom":"Rose","url":"https://fr.wikipedia.org/wiki/Rose_(fleur)"},
-  {"nom":"Menthe","url":"https://fr.wikipedia.org/wiki/Menthe"}
+  {"nom":"Menthe","url":"https://fr.wikipedia.org/wiki/Menthe"},
+  {"nom":"Palmier a miel","url":"https://www.canva.com/design/DAHbqgsnHrM/EHc8Tgl3tFHoy6GXtk-VcQ/view?utm_content=DAHbqgsnHrM&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h0918d57518#2"}
 ];
-/* ==================================================================== */
 
 const $=id=>document.getElementById(id);
 const norm=s=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
